@@ -1,3 +1,27 @@
 spring:
   application:
     name: nanolink
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nanolink
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true      
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.nanolink: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
