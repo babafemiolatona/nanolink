@@ -5,6 +5,8 @@ import com.nanolink.dto.ShortenUrlResponse;
 import com.nanolink.models.Url;
 import com.nanolink.exception.InvalidUrlException;
 import com.nanolink.exception.ShortCodeAlreadyExistsException;
+import com.nanolink.exception.UrlExpiredException;
+import com.nanolink.exception.UrlNotFoundException;
 import com.nanolink.repository.UrlRepository;
 import com.nanolink.utils.ShortCodeGenerator;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +36,7 @@ public class UrlService {
         log.info("Shortening URL: {}", request.getUrl());
 
         validateUrl(request.getUrl());
-
         String shortCode = determineShortCode(request.getCustomShortCode());
-
         LocalDateTime expiresAt = calculateExpiration(request.getExpirationDays());
 
         Url url = Url.builder()
@@ -55,6 +55,31 @@ public class UrlService {
                 .createdAt(savedUrl.getCreatedAt())
                 .expiresAt(savedUrl.getExpiresAt())
                 .build();
+    }
+
+    @Transactional
+    public String getOriginalUrl(String shortCode) {
+        log.info("Looking up short code: {}", shortCode);
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        if (!url.getIsActive()) {
+            log.warn("Attempted to access inactive URL: {}", shortCode);
+            throw new UrlNotFoundException("This short URL has been deactivated");
+        }
+
+        if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(LocalDateTime.now())) {
+            log.warn("Attempted to access expired URL: {}", shortCode);
+            throw new UrlExpiredException("This short URL has expired");
+        }
+
+        url.setClickCount(url.getClickCount() + 1);
+        urlRepository.save(url);
+
+        log.info("Redirecting {} to {} (clicks: {})", shortCode, url.getOriginalUrl(), url.getClickCount());
+
+        return url.getOriginalUrl();
     }
 
     private void validateUrl(String urlString) {
