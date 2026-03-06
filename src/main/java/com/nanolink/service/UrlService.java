@@ -9,6 +9,8 @@ import com.nanolink.exception.UrlExpiredException;
 import com.nanolink.exception.UrlNotFoundException;
 import com.nanolink.repository.UrlRepository;
 import com.nanolink.utils.ShortCodeGenerator;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,7 @@ public class UrlService {
 
     private final UrlRepository urlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
+    private final ClickService clickService;
 
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -58,7 +61,7 @@ public class UrlService {
     }
 
     @Transactional
-    public String getOriginalUrl(String shortCode) {
+    public String getOriginalUrlAndTrack(String shortCode, HttpServletRequest request) {
         log.info("Looking up short code: {}", shortCode);
 
         Url url = urlRepository.findByShortCode(shortCode)
@@ -76,6 +79,8 @@ public class UrlService {
 
         url.setClickCount(url.getClickCount() + 1);
         urlRepository.save(url);
+
+        clickService.trackClick(url, request);
 
         log.info("Redirecting {} to {} (clicks: {})", shortCode, url.getOriginalUrl(), url.getClickCount());
 

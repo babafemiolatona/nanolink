@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,14 +77,13 @@ public class UrlController {
     @GetMapping("/{shortCode}")
     public RedirectView redirectToOriginalUrl(
             @Parameter(description = "The short code to redirect", example = "aB3xY9k")
-            @PathVariable String shortCode) {
+            @PathVariable String shortCode,
+            HttpServletRequest request) {
         
         log.info("Redirect request for short code: {}", shortCode);
         
-        String originalUrl = urlService.getOriginalUrl(shortCode);
+        String originalUrl = urlService.getOriginalUrlAndTrack(shortCode, request);
         
-        // Use 302 (temporary redirect) instead of 301 (permanent)
-        // This allows us to track clicks and change URLs later
         RedirectView redirectView = new RedirectView(originalUrl);
         redirectView.setStatusCode(HttpStatus.FOUND);
         
