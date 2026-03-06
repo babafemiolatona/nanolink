@@ -4,8 +4,7 @@ import java.time.LocalDateTime;
 
 import lombok.*;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

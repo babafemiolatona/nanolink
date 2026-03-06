@@ -4,10 +4,9 @@ import java.time.LocalDateTime;
 
 import lombok.*;
 
-@Getter
-@Setter
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ErrorResponse {
 

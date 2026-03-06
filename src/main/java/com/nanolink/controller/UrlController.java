@@ -2,7 +2,9 @@ package com.nanolink.controller;
 
 import com.nanolink.dto.ShortenUrlRequest;
 import com.nanolink.dto.ShortenUrlResponse;
+import com.nanolink.dto.UrlStatsResponse;
 import com.nanolink.service.UrlService;
+import com.nanolink.service.AnalyticsService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,6 +28,7 @@ import org.springframework.web.servlet.view.RedirectView;
 public class UrlController {
 
     private final UrlService urlService;
+    private final AnalyticsService analyticsService;
 
     @Operation(
         summary = "Shorten a URL",
@@ -88,6 +91,31 @@ public class UrlController {
         redirectView.setStatusCode(HttpStatus.FOUND);
         
         return redirectView;
+    }
+
+    @Operation(
+        summary = "Get URL statistics",
+        description = "Retrieves detailed analytics for a short URL including click count, device breakdown, browser stats, and geographic data."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Statistics retrieved successfully",
+            content = @Content(schema = @Schema(implementation = UrlStatsResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Short code not found"
+        )
+    })
+    @GetMapping("/stats/{shortCode}")
+    public ResponseEntity<UrlStatsResponse> getUrlStats(
+            @Parameter(description = "The short code to get statistics for", example = "aB3xY9k")
+            @PathVariable String shortCode) {
+        
+        log.info("Fetching statistics for short code: {}", shortCode);
+        UrlStatsResponse stats = analyticsService.getUrlStats(shortCode);
+        return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/health")

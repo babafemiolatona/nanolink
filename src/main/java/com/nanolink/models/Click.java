@@ -2,7 +2,7 @@ package com.nanolink.models;
 
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -30,7 +30,7 @@ public class Click {
 
     @CreationTimestamp
     @Column(name = "clicked_at", nullable = false, updatable = false)
-    private LocalDate clickedAt;
+    private LocalDateTime clickedAt;
 
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
