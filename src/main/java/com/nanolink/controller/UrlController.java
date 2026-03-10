@@ -2,9 +2,15 @@ package com.nanolink.controller;
 
 import com.nanolink.dto.ShortenUrlRequest;
 import com.nanolink.dto.ShortenUrlResponse;
+import com.nanolink.dto.UpdateUrlRequest;
 import com.nanolink.dto.UrlStatsResponse;
 import com.nanolink.service.UrlService;
 import com.nanolink.service.AnalyticsService;
+import com.nanolink.service.RateLimitService;
+
+import com.nanolink.utils.InputSanitizer;
+
+import com.nanolink.exception.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +35,8 @@ public class UrlController {
 
     private final UrlService urlService;
     private final AnalyticsService analyticsService;
+    private final RateLimitService rateLimitService;
+    private final InputSanitizer inputSanitizer;
 
     @Operation(
         summary = "Shorten a URL",
@@ -51,8 +59,21 @@ public class UrlController {
     })
     @PostMapping("/shorten")
     public ResponseEntity<ShortenUrlResponse> shortenUrl(
-            @Valid @RequestBody ShortenUrlRequest request) {
+            @Valid @RequestBody ShortenUrlRequest request,
+            HttpServletRequest httpRequest) {
         
+        if (!rateLimitService.isAllowed(httpRequest)) {
+            throw new RateLimitExceededException("Too many requests. Please try again in a limit.");
+        }
+
+        String sanitizedUrl = inputSanitizer.sanitizeUrl(request.getUrl());
+        request.setUrl(sanitizedUrl);
+
+        if (request.getCustomShortCode() != null) {
+            String sanitizedCode = inputSanitizer.sanitizeShortCode(request.getCustomShortCode());
+            request.setCustomShortCode(sanitizedCode);
+        }
+
         log.info("Received shorten URL request for: {}", request.getUrl());
         ShortenUrlResponse response = urlService.shortenUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -116,6 +137,71 @@ public class UrlController {
         log.info("Fetching statistics for short code: {}", shortCode);
         UrlStatsResponse stats = analyticsService.getUrlStats(shortCode);
         return ResponseEntity.ok(stats);
+    }
+
+    @Operation(summary = "Deactivate a URL", description = "Soft delete - prevents redirects but keeps analytics")
+    @ApiResponse(responseCode = "200", description = "URL deactivated successfully")
+    @PatchMapping("/urls/{shortCode}/deactivate")
+    public ResponseEntity<ShortenUrlResponse> deactivateUrl(
+            @Parameter(description = "Short code to deactivate")
+            @PathVariable String shortCode,
+            HttpServletRequest request) {
+        
+        if (!rateLimitService.isAllowed(request)) {
+            throw new RateLimitExceededException("Too many requests from your IP");
+        }
+        
+        ShortenUrlResponse response = urlService.deactivateUrl(shortCode);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Reactivate a URL", description = "Re-enable a deactivated URL")
+    @ApiResponse(responseCode = "200", description = "URL reactivated successfully")
+    @PatchMapping("/urls/{shortCode}/reactivate")
+    public ResponseEntity<ShortenUrlResponse> reactivateUrl(
+            @Parameter(description = "Short code to reactivate")
+            @PathVariable String shortCode,
+            HttpServletRequest request) {
+        
+        if (!rateLimitService.isAllowed(request)) {
+            throw new RateLimitExceededException("Too many requests from your IP");
+        }
+        
+        ShortenUrlResponse response = urlService.reactivateUrl(shortCode);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Update URL settings", description = "Update active status or expiration")
+    @ApiResponse(responseCode = "200", description = "URL updated successfully")
+    @PatchMapping("/urls/{shortCode}")
+    public ResponseEntity<ShortenUrlResponse> updateUrl(
+            @Parameter(description = "Short code to update")
+            @PathVariable String shortCode,
+            @Valid @RequestBody UpdateUrlRequest request,
+            HttpServletRequest httpRequest) {
+        
+        if (!rateLimitService.isAllowed(httpRequest)) {
+            throw new RateLimitExceededException("Too many requests from your IP");
+        }
+        
+        ShortenUrlResponse response = urlService.updateUrl(shortCode, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Permanently delete a URL", description = "Hard delete - removes URL and all analytics")
+    @ApiResponse(responseCode = "204", description = "URL deleted successfully")
+    @DeleteMapping("/urls/{shortCode}/permanent")
+    public ResponseEntity<Void> deleteUrlPermanently(
+            @Parameter(description = "Short code to delete permanently")
+            @PathVariable String shortCode,
+            HttpServletRequest request) {
+        
+        if (!rateLimitService.isAllowed(request)) {
+            throw new RateLimitExceededException("Too many requests from your IP");
+        }
+        
+        urlService.deleteUrl(shortCode);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/health")

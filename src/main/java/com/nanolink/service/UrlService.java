@@ -2,6 +2,7 @@ package com.nanolink.service;
 
 import com.nanolink.dto.ShortenUrlRequest;
 import com.nanolink.dto.ShortenUrlResponse;
+import com.nanolink.dto.UpdateUrlRequest;
 import com.nanolink.models.Url;
 import com.nanolink.exception.InvalidUrlException;
 import com.nanolink.exception.ShortCodeAlreadyExistsException;
@@ -127,5 +128,71 @@ public class UrlService {
             return LocalDateTime.now().plusDays(expirationDays);
         }
         return null;
+    }
+
+    @Transactional
+    public ShortenUrlResponse deactivateUrl(String shortCode) {
+        log.info("Deactivating URL: {}", shortCode);
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        url.setIsActive(false);
+        Url updated = urlRepository.save(url);
+
+        return buildResponse(updated);
+    }
+
+    @Transactional
+    public ShortenUrlResponse reactivateUrl(String shortCode) {
+        log.info("Reactivating URL: {}", shortCode);
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        url.setIsActive(true);
+        Url updated = urlRepository.save(url);
+
+        return buildResponse(updated);
+    }
+
+    @Transactional
+    public void deleteUrl(String shortCode) {
+        log.info("Deleting URL: {}", shortCode);
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        urlRepository.delete(url);
+    }
+
+    @Transactional
+    public ShortenUrlResponse updateUrl(String shortCode, UpdateUrlRequest request) {
+        log.info("Updating URL: {}", shortCode);
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        if (request.getIsActive() != null) {
+            url.setIsActive(request.getIsActive());
+        }
+
+        if (request.getExpirationDays() != null) {
+            url.setExpiresAt(LocalDateTime.now().plusDays(request.getExpirationDays()));
+        }
+
+        Url updated = urlRepository.save(url);
+
+        return buildResponse(updated);
+    }
+
+    private ShortenUrlResponse buildResponse(Url url) {
+        return ShortenUrlResponse.builder()
+                .shortCode(url.getShortCode())
+                .shortUrl(baseUrl + "/" + url.getShortCode())
+                .originalUrl(url.getOriginalUrl())
+                .createdAt(url.getCreatedAt())
+                .expiresAt(url.getExpiresAt())
+                .build();
     }
 }

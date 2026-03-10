@@ -5,6 +5,8 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import jakarta.persistence.*;
 
@@ -26,6 +28,7 @@ public class Click {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "url_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Url url;
 
     @CreationTimestamp
