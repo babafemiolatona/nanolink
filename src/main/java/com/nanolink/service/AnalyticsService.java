@@ -4,9 +4,7 @@ import com.nanolink.dto.ClickInfo;
 import com.nanolink.dto.UrlStatsResponse;
 import com.nanolink.models.Click;
 import com.nanolink.models.Url;
-import com.nanolink.exception.UrlNotFoundException;
 import com.nanolink.repository.ClickRepository;
-import com.nanolink.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,14 +18,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AnalyticsService {
 
-    private final UrlRepository urlRepository;
     private final ClickRepository clickRepository;
+    private final UrlCacheService urlCacheService;
 
     public UrlStatsResponse getUrlStats(String shortCode) {
         log.info("Fetching statistics for short code: {}", shortCode);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = urlCacheService.getByShortCode(shortCode);
 
         List<Click> allClicks = clickRepository.findByUrlOrderByClickedAtDesc(url);
 
@@ -145,7 +142,6 @@ public class AnalyticsService {
                 ));
     }
 
-    // Mask IP address for privacy (e.g., 192.168.1.100 -> 192.168.x.x)
     private String maskIpAddress(String ip) {
         if (ip == null || ip.isEmpty()) {
             return "Unknown";
@@ -153,11 +149,9 @@ public class AnalyticsService {
         
         String[] parts = ip.split("\\.");
         if (parts.length == 4) {
-            // IPv4
             return parts[0] + "." + parts[1] + ".x.x";
         }
         
-        // IPv6 or other - just return first part
         if (ip.contains(":")) {
             String[] ipv6Parts = ip.split(":");
             if (ipv6Parts.length > 2) {

@@ -1,6 +1,7 @@
 package com.nanolink.models;
 
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import lombok.*;
@@ -14,7 +15,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Url {
+public class Url implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

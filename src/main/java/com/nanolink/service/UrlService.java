@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ public class UrlService {
     private final UrlRepository urlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
     private final ClickService clickService;
+    private final UrlCacheService urlCacheService;
 
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
@@ -65,8 +67,7 @@ public class UrlService {
     public String getOriginalUrlAndTrack(String shortCode, HttpServletRequest request) {
         log.info("Looking up short code: {}", shortCode);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = urlCacheService.getByShortCode(shortCode);
 
         if (!url.getIsActive()) {
             log.warn("Attempted to access inactive URL: {}", shortCode);
@@ -131,6 +132,7 @@ public class UrlService {
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public ShortenUrlResponse deactivateUrl(String shortCode) {
         log.info("Deactivating URL: {}", shortCode);
 
@@ -144,6 +146,7 @@ public class UrlService {
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public ShortenUrlResponse reactivateUrl(String shortCode) {
         log.info("Reactivating URL: {}", shortCode);
 
@@ -157,6 +160,7 @@ public class UrlService {
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public void deleteUrl(String shortCode) {
         log.info("Deleting URL: {}", shortCode);
 
@@ -167,6 +171,7 @@ public class UrlService {
     }
 
     @Transactional
+    @CacheEvict(value = "urls", key = "#shortCode")
     public ShortenUrlResponse updateUrl(String shortCode, UpdateUrlRequest request) {
         log.info("Updating URL: {}", shortCode);
 
