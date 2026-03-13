@@ -1,8 +1,8 @@
 package com.nanolink.dto;
 
-import java.time.LocalDateTime;
-
 import lombok.*;
+
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -10,9 +10,8 @@ import lombok.*;
 @Builder
 public class ErrorResponse {
 
-    private String message;
-    private int status;
-    private LocalDateTime timestamp;
-    private String path;
+    private String message;              
+    private String code;
+    private Map<String, String> details;
 
 }

@@ -43,4 +43,11 @@ public class Url implements Serializable {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "created_by_ip", length = 45)
+    private String createdByIp;
 }
