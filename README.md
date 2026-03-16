@@ -26,6 +26,78 @@ A simple URL shortener built with Spring Boot and PostgreSQL. It supports user r
 ---
 
 ## Getting Started
+Docker is the recommended way to run NanoLink. The project is designed to run the API, PostgreSQL, and Redis together via Docker Compose.
+
+### Prerequisites
+- Docker
+- Docker Compose
+
+### Quick Start (Docker - Recommended)
+
+1. Create a `.env` file in the project root:
+
+```bash
+POSTGRES_DB=nanolink
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+JWT_SECRET=REPLACE_WITH_BASE64_SECRET
+JWT_ACCESS_TOKEN_EXPIRATION=900000
+JWT_REFRESH_TOKEN_EXPIRATION=604800000
+
+APP_BASE_URL=http://localhost:8080
+SERVER_PORT=8080
+```
+
+2. Start all services:
+
+```bash
+docker compose up --build
+```
+
+3. API is available at:
+- `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+
+### Docker Services
+- `app` -> Spring Boot API (`nanolink-app`)
+- `postgres` -> PostgreSQL 16 (`nanolink-db`)
+- `redis` -> Redis 7 (`nanolink-redis`)
+
+### Useful Docker Commands
+```bash
+# Start in background
+docker compose up --build -d
+
+# View logs
+docker compose logs -f app
+
+# Stop services
+docker compose down
+
+# Stop services and remove volumes
+docker compose down -v
+```
+
+### Run Without Docker (Optional)
+If you prefer local execution, install Java, Maven, PostgreSQL, and Redis manually.
+Then configure environment variables and run:
+
+```bash
+./mvnw clean package
+./mvnw spring-boot:run
+```
+
+### Environment Variables
+Set these variables in `.env` (Docker) or your shell (local):
+- `DB_HOST`, `DB_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `REDIS_HOST`, `REDIS_PORT`
+- `JWT_SECRET` (base64-encoded, 256-bit recommended)
+- `JWT_ACCESS_TOKEN_EXPIRATION`, `JWT_REFRESH_TOKEN_EXPIRATION`
+- `APP_BASE_URL`, `SERVER_PORT`
 
 ### Prerequisites
 - Java 17+
