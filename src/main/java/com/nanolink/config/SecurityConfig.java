@@ -29,10 +29,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/auth/**",
-                    "/api/v1/shorten",           // Allow anonymous URL creation
-                    "/api/v1/{shortCode}",       // Allow anyone to redirect
-                    "/api/v1/health",            // Health check
-                    "/v3/api-docs/**",           // Swagger docs
+                    "/api/v1/{shortCode}",
+                    "/api/v1/health",
+                    "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html"
                 ).permitAll()

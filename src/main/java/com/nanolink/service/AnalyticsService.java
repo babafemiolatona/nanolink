@@ -4,7 +4,9 @@ import com.nanolink.dto.ClickInfo;
 import com.nanolink.dto.UrlStatsResponse;
 import com.nanolink.models.Click;
 import com.nanolink.models.Url;
+import com.nanolink.exception.UrlNotFoundException;
 import com.nanolink.repository.ClickRepository;
+import com.nanolink.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,12 +21,13 @@ import java.util.stream.Collectors;
 public class AnalyticsService {
 
     private final ClickRepository clickRepository;
-    private final UrlCacheService urlCacheService;
+        private final UrlRepository urlRepository;
 
-    public UrlStatsResponse getUrlStats(String shortCode) {
-        log.info("Fetching statistics for short code: {}", shortCode);
+        public UrlStatsResponse getUrlStats(String shortCode, String ownerEmail) {
+                log.info("Fetching statistics for short code: {} for user: {}", shortCode, ownerEmail);
 
-        Url url = urlCacheService.getByShortCode(shortCode);
+                Url url = urlRepository.findByShortCodeAndUser_Email(shortCode, ownerEmail)
+                                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
 
         List<Click> allClicks = clickRepository.findByUrlOrderByClickedAtDesc(url);
 

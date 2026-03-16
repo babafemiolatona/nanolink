@@ -4,10 +4,12 @@ import com.nanolink.dto.ShortenUrlRequest;
 import com.nanolink.dto.ShortenUrlResponse;
 import com.nanolink.dto.UpdateUrlRequest;
 import com.nanolink.models.Url;
+import com.nanolink.models.User;
 import com.nanolink.exception.InvalidUrlException;
 import com.nanolink.exception.ShortCodeAlreadyExistsException;
 import com.nanolink.exception.UrlExpiredException;
 import com.nanolink.exception.UrlNotFoundException;
+import com.nanolink.repository.UserRepository;
 import com.nanolink.repository.UrlRepository;
 import com.nanolink.utils.ShortCodeGenerator;
 
@@ -23,6 +25,7 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,7 @@ import java.time.LocalDateTime;
 public class UrlService {
 
     private final UrlRepository urlRepository;
+    private final UserRepository userRepository;
     private final ShortCodeGenerator shortCodeGenerator;
     private final ClickService clickService;
     private final UrlCacheService urlCacheService;
@@ -37,18 +41,22 @@ public class UrlService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
+    @SuppressWarnings("null")
     @Transactional
-    public ShortenUrlResponse shortenUrl(ShortenUrlRequest request) {
-        log.info("Shortening URL: {}", request.getUrl());
+    public ShortenUrlResponse shortenUrl(ShortenUrlRequest request, String ownerEmail) {
+        log.info("Shortening URL: {} for user: {}", request.getUrl(), ownerEmail);
 
         validateUrl(request.getUrl());
         String shortCode = determineShortCode(request.getCustomShortCode());
         LocalDateTime expiresAt = calculateExpiration(request.getExpirationDays());
+        User owner = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new UrlNotFoundException("Authenticated user not found: " + ownerEmail));
 
         Url url = Url.builder()
                 .shortCode(shortCode)
                 .originalUrl(request.getUrl())
                 .expiresAt(expiresAt)
+                .user(owner)
                 .build();
 
         Url savedUrl = urlRepository.save(url);
@@ -133,11 +141,10 @@ public class UrlService {
 
     @Transactional
     @CacheEvict(value = "urls", key = "#shortCode")
-    public ShortenUrlResponse deactivateUrl(String shortCode) {
-        log.info("Deactivating URL: {}", shortCode);
+    public ShortenUrlResponse deactivateUrl(String shortCode, String ownerEmail) {
+        log.info("Deactivating URL: {} for user: {}", shortCode, ownerEmail);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = getOwnedUrl(shortCode, ownerEmail);
 
         url.setIsActive(false);
         Url updated = urlRepository.save(url);
@@ -147,11 +154,10 @@ public class UrlService {
 
     @Transactional
     @CacheEvict(value = "urls", key = "#shortCode")
-    public ShortenUrlResponse reactivateUrl(String shortCode) {
-        log.info("Reactivating URL: {}", shortCode);
+    public ShortenUrlResponse reactivateUrl(String shortCode, String ownerEmail) {
+        log.info("Reactivating URL: {} for user: {}", shortCode, ownerEmail);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = getOwnedUrl(shortCode, ownerEmail);
 
         url.setIsActive(true);
         Url updated = urlRepository.save(url);
@@ -161,22 +167,22 @@ public class UrlService {
 
     @Transactional
     @CacheEvict(value = "urls", key = "#shortCode")
-    public void deleteUrl(String shortCode) {
-        log.info("Deleting URL: {}", shortCode);
+    @SuppressWarnings("null")
+    public void deleteUrl(String shortCode, String ownerEmail) {
+        log.info("Deleting URL: {} for user: {}", shortCode, ownerEmail);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = getOwnedUrl(shortCode, ownerEmail);
 
         urlRepository.delete(url);
     }
 
     @Transactional
     @CacheEvict(value = "urls", key = "#shortCode")
-    public ShortenUrlResponse updateUrl(String shortCode, UpdateUrlRequest request) {
-        log.info("Updating URL: {}", shortCode);
+    @SuppressWarnings("null")
+    public ShortenUrlResponse updateUrl(String shortCode, UpdateUrlRequest request, String ownerEmail) {
+        log.info("Updating URL: {} for user: {}", shortCode, ownerEmail);
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = getOwnedUrl(shortCode, ownerEmail);
 
         if (request.getIsActive() != null) {
             url.setIsActive(request.getIsActive());
@@ -189,6 +195,21 @@ public class UrlService {
         Url updated = urlRepository.save(url);
 
         return buildResponse(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public Url getOwnedUrl(String shortCode, String ownerEmail) {
+        return urlRepository.findByShortCodeAndUser_Email(shortCode, ownerEmail)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShortenUrlResponse> getUserUrls(String ownerEmail) {
+        log.info("Fetching URLs for user: {}", ownerEmail);
+
+        return urlRepository.findAllByUser_EmailOrderByCreatedAtDesc(ownerEmail).stream()
+                .map(this::buildResponse)
+                .toList();
     }
 
     private ShortenUrlResponse buildResponse(Url url) {

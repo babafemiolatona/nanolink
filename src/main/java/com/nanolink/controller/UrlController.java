@@ -24,8 +24,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -60,7 +63,8 @@ public class UrlController {
     @PostMapping("/shorten")
     public ResponseEntity<ShortenUrlResponse> shortenUrl(
             @Valid @RequestBody ShortenUrlRequest request,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
         
         if (!rateLimitService.isAllowed(httpRequest)) {
             throw new RateLimitExceededException("Too many requests. Please try again in a limit.");
@@ -75,7 +79,7 @@ public class UrlController {
         }
 
         log.info("Received shorten URL request for: {}", request.getUrl());
-        ShortenUrlResponse response = urlService.shortenUrl(request);
+        ShortenUrlResponse response = urlService.shortenUrl(request, authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -99,6 +103,7 @@ public class UrlController {
         )
     })
     @GetMapping("/{shortCode}")
+    @SuppressWarnings("null")
     public RedirectView redirectToOriginalUrl(
             @Parameter(description = "The short code to redirect", example = "aB3xY9k")
             @PathVariable String shortCode,
@@ -132,11 +137,30 @@ public class UrlController {
     @GetMapping("/stats/{shortCode}")
     public ResponseEntity<UrlStatsResponse> getUrlStats(
             @Parameter(description = "The short code to get statistics for", example = "aB3xY9k")
-            @PathVariable String shortCode) {
+            @PathVariable String shortCode,
+            Authentication authentication) {
         
         log.info("Fetching statistics for short code: {}", shortCode);
-        UrlStatsResponse stats = analyticsService.getUrlStats(shortCode);
+        UrlStatsResponse stats = analyticsService.getUrlStats(shortCode, authentication.getName());
         return ResponseEntity.ok(stats);
+    }
+
+    @Operation(
+        summary = "Get my URLs",
+        description = "Retrieves all URLs created by the authenticated user ordered by most recent first."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "URLs retrieved successfully",
+            content = @Content(schema = @Schema(implementation = ShortenUrlResponse.class))
+        )
+    })
+    @GetMapping("/urls/me")
+    public ResponseEntity<List<ShortenUrlResponse>> getMyUrls(Authentication authentication) {
+        log.info("Fetching URLs for authenticated user: {}", authentication.getName());
+        List<ShortenUrlResponse> urls = urlService.getUserUrls(authentication.getName());
+        return ResponseEntity.ok(urls);
     }
 
     @Operation(summary = "Deactivate a URL", description = "Soft delete - prevents redirects but keeps analytics")
@@ -145,13 +169,14 @@ public class UrlController {
     public ResponseEntity<ShortenUrlResponse> deactivateUrl(
             @Parameter(description = "Short code to deactivate")
             @PathVariable String shortCode,
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            Authentication authentication) {
         
         if (!rateLimitService.isAllowed(request)) {
             throw new RateLimitExceededException("Too many requests from your IP");
         }
         
-        ShortenUrlResponse response = urlService.deactivateUrl(shortCode);
+        ShortenUrlResponse response = urlService.deactivateUrl(shortCode, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -161,13 +186,14 @@ public class UrlController {
     public ResponseEntity<ShortenUrlResponse> reactivateUrl(
             @Parameter(description = "Short code to reactivate")
             @PathVariable String shortCode,
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            Authentication authentication) {
         
         if (!rateLimitService.isAllowed(request)) {
             throw new RateLimitExceededException("Too many requests from your IP");
         }
         
-        ShortenUrlResponse response = urlService.reactivateUrl(shortCode);
+        ShortenUrlResponse response = urlService.reactivateUrl(shortCode, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -178,13 +204,14 @@ public class UrlController {
             @Parameter(description = "Short code to update")
             @PathVariable String shortCode,
             @Valid @RequestBody UpdateUrlRequest request,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
         
         if (!rateLimitService.isAllowed(httpRequest)) {
             throw new RateLimitExceededException("Too many requests from your IP");
         }
         
-        ShortenUrlResponse response = urlService.updateUrl(shortCode, request);
+        ShortenUrlResponse response = urlService.updateUrl(shortCode, request, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -194,13 +221,14 @@ public class UrlController {
     public ResponseEntity<Void> deleteUrlPermanently(
             @Parameter(description = "Short code to delete permanently")
             @PathVariable String shortCode,
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            Authentication authentication) {
         
         if (!rateLimitService.isAllowed(request)) {
             throw new RateLimitExceededException("Too many requests from your IP");
         }
         
-        urlService.deleteUrl(shortCode);
+        urlService.deleteUrl(shortCode, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 
