@@ -17,6 +17,7 @@ A simple URL shortener built with Spring Boot and PostgreSQL. It supports user r
 - Spring Boot 3.3
 - Spring Security (JWT)
 - Spring Data JPA (Hibernate)
+- Docker
 - PostgreSQL
 - Redis (cache, rate limiting)
 - Lombok
