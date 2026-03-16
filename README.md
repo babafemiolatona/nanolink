@@ -70,8 +70,8 @@ docker compose up --build
 
 ### Useful Docker Commands
 ```bash
-# Start in background
-docker compose up --build -d
+# Start services
+docker compose up --build
 
 # View logs
 docker compose logs -f app
