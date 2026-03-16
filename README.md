@@ -12,7 +12,7 @@ A simple URL shortener built with Spring Boot and PostgreSQL. It supports user r
 - **PostgreSQL** for persistence
 - **Redis** for caching
 
-## Technology Stack
+## Tech Stack
 - Java 17
 - Spring Boot 3.3
 - Spring Security (JWT)
