@@ -26,7 +26,7 @@ public class CustomAuthEntryPoint implements AuthenticationEntryPoint {
         response.setContentType("application/json");
         
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .message("Authentication required. Please provide a valid JWT token.")
+                .message("User not authenticated")
                 .code(ErrorCode.AUTH_REQUIRED)
                 .build();
                 
