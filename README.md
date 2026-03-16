@@ -151,3 +151,47 @@ Set these variables (or use defaults in `application.yaml`):
 
 ---
 
+## Usage Examples
+
+### Register
+```bash
+curl -X POST "$APP_BASE_URL/api/v1/auth/register" \
+	-H "Content-Type: application/json" \
+	-d '{"email":"user@example.com","username":"user1","password":"password123"}'
+```
+
+### Login
+```bash
+curl -X POST "$APP_BASE_URL/api/v1/auth/login" \
+	-H "Content-Type: application/json" \
+	-d '{"emailOrUsername":"user1","password":"password123"}'
+```
+
+### Shorten URL
+```bash
+curl -X POST "$APP_BASE_URL/api/v1/shorten" \
+	-H "Authorization: Bearer <token>" \
+	-H "Content-Type: application/json" \
+	-d '{"url":"https://example.com"}'
+```
+
+### List My URLs
+```bash
+curl -X GET "$APP_BASE_URL/api/v1/urls/me" \
+	-H "Authorization: Bearer <token>"
+```
+
+---
+
+## Ownership & Security
+- All URL management endpoints require JWT and enforce that users can only access their own URLs.
+- JWT tokens are validated on every request.
+- Rate limiting is applied to sensitive endpoints.
+
+---
+
+## API Documentation
+- Swagger UI: `/swagger-ui.html` or `/swagger-ui/`
+- OpenAPI docs: `/v3/api-docs/`
+
+---
