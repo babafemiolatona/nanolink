@@ -3,6 +3,7 @@ package com.nanolink.service;
 import com.nanolink.dto.ShortenUrlRequest;
 import com.nanolink.dto.ShortenUrlResponse;
 import com.nanolink.dto.UpdateUrlRequest;
+import com.nanolink.dto.CachedUrl;
 import com.nanolink.models.Url;
 import com.nanolink.models.User;
 import com.nanolink.exception.InvalidUrlException;
@@ -75,26 +76,29 @@ public class UrlService {
     public String getOriginalUrlAndTrack(String shortCode, HttpServletRequest request) {
         log.info("Looking up short code: {}", shortCode);
 
-        Url url = urlCacheService.getByShortCode(shortCode);
+        CachedUrl cachedUrl = urlCacheService.getByShortCode(shortCode);
 
-        if (!url.getIsActive()) {
+        if (!cachedUrl.getIsActive()) {
             log.warn("Attempted to access inactive URL: {}", shortCode);
             throw new UrlNotFoundException("This short URL has been deactivated");
         }
 
-        if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (cachedUrl.getExpiresAt() != null && cachedUrl.getExpiresAt().isBefore(LocalDateTime.now())) {
             log.warn("Attempted to access expired URL: {}", shortCode);
             throw new UrlExpiredException("This short URL has expired");
         }
+
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
 
         url.setClickCount(url.getClickCount() + 1);
         urlRepository.save(url);
 
         clickService.trackClick(url, request);
 
-        log.info("Redirecting {} to {} (clicks: {})", shortCode, url.getOriginalUrl(), url.getClickCount());
+        log.info("Redirecting {} to {} (clicks: {})", shortCode, cachedUrl.getOriginalUrl(), url.getClickCount());
 
-        return url.getOriginalUrl();
+        return cachedUrl.getOriginalUrl();
     }
 
     private void validateUrl(String urlString) {

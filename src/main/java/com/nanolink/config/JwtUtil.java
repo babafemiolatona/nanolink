@@ -28,7 +28,7 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(Long userId, UserDetails userDetails) {
 
         String role = userDetails.getAuthorities().stream()
             .findFirst()
@@ -36,7 +36,7 @@ public class JwtUtil {
             .orElse("ROLE_USER");
 
         return Jwts.builder()
-            .subject(userDetails.getUsername())
+            .subject(userId.toString())
             .claim("role", role)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
@@ -54,8 +54,7 @@ public class JwtUtil {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         try {
-            String username = extractUsername(token);
-            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            return !isTokenExpired(token);
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

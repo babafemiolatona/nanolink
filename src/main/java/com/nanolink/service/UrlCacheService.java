@@ -1,5 +1,6 @@
 package com.nanolink.service;
 
+import com.nanolink.dto.CachedUrl;
 import com.nanolink.exception.UrlNotFoundException;
 import com.nanolink.models.Url;
 import com.nanolink.repository.UrlRepository;
@@ -10,10 +11,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Separate service for cacheable URL operations.
- * Spring AOP caching only works on external method calls through proxies.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -23,10 +20,18 @@ public class UrlCacheService {
 
     @Cacheable(value = "urls", key = "#shortCode", unless = "#result == null")
     @Transactional(readOnly = true)
-    public Url getByShortCode(String shortCode) {
+        public CachedUrl getByShortCode(String shortCode) {
         log.info("Cache MISS - Fetching from database: {}", shortCode);
-        return urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+        Url url = urlRepository.findByShortCode(shortCode)
+            .orElseThrow(() -> new UrlNotFoundException("Short URL not found: " + shortCode));
+
+        return CachedUrl.builder()
+            .id(url.getId())
+            .shortCode(url.getShortCode())
+            .originalUrl(url.getOriginalUrl())
+            .expiresAt(url.getExpiresAt())
+            .isActive(url.getIsActive())
+            .build();
     }
 
     @CacheEvict(value = "urls", key = "#shortCode")

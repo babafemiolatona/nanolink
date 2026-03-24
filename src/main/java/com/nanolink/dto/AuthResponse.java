@@ -1,6 +1,5 @@
 package com.nanolink.dto;
 
-import com.nanolink.models.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
