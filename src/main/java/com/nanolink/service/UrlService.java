@@ -39,7 +39,7 @@ public class UrlService {
     private final ClickService clickService;
     private final UrlCacheService urlCacheService;
 
-    @Value("${app.base-url:http://localhost:8080}")
+    @Value("${app.base-url}")
     private String baseUrl;
 
     @SuppressWarnings("null")

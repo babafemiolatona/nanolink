@@ -29,6 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/auth/**",
+                    "/{shortCode}",
                     "/api/v1/{shortCode}",
                     "/api/v1/health",
                     "/v3/api-docs/**",

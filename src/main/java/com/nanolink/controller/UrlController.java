@@ -31,7 +31,6 @@ import org.springframework.web.servlet.view.RedirectView;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Slf4j
 public class UrlController {
@@ -60,7 +59,7 @@ public class UrlController {
             description = "Custom short code already exists"
         )
     })
-    @PostMapping("/shorten")
+    @PostMapping("/api/v1/shorten")
     public ResponseEntity<ShortenUrlResponse> shortenUrl(
             @Valid @RequestBody ShortenUrlRequest request,
             HttpServletRequest httpRequest,
@@ -84,42 +83,6 @@ public class UrlController {
     }
 
     @Operation(
-        summary = "Redirect to original URL",
-        description = "Redirects the user to the original URL associated with the short code. " +
-                     "Increments the click counter for analytics."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "302",
-            description = "Redirect to original URL"
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Short code not found or URL is inactive"
-        ),
-        @ApiResponse(
-            responseCode = "410",
-            description = "URL has expired"
-        )
-    })
-    @GetMapping("/{shortCode}")
-    @SuppressWarnings("null")
-    public RedirectView redirectToOriginalUrl(
-            @Parameter(description = "The short code to redirect", example = "aB3xY9k")
-            @PathVariable String shortCode,
-            HttpServletRequest request) {
-        
-        log.info("Redirect request for short code: {}", shortCode);
-        
-        String originalUrl = urlService.getOriginalUrlAndTrack(shortCode, request);
-        
-        RedirectView redirectView = new RedirectView(originalUrl);
-        redirectView.setStatusCode(HttpStatus.FOUND);
-        
-        return redirectView;
-    }
-
-    @Operation(
         summary = "Get URL statistics",
         description = "Retrieves detailed analytics for a short URL including click count, device breakdown, browser stats, and geographic data."
     )
@@ -134,7 +97,7 @@ public class UrlController {
             description = "Short code not found"
         )
     })
-    @GetMapping("/stats/{shortCode}")
+    @GetMapping("/api/v1/stats/{shortCode}")
     public ResponseEntity<UrlStatsResponse> getUrlStats(
             @Parameter(description = "The short code to get statistics for", example = "aB3xY9k")
             @PathVariable String shortCode,
@@ -156,7 +119,7 @@ public class UrlController {
             content = @Content(schema = @Schema(implementation = ShortenUrlResponse.class))
         )
     })
-    @GetMapping("/urls/me")
+    @GetMapping("/api/v1/urls/me")
     public ResponseEntity<List<ShortenUrlResponse>> getMyUrls(Authentication authentication) {
         log.info("Fetching URLs for authenticated user: {}", authentication.getName());
         List<ShortenUrlResponse> urls = urlService.getUserUrls(authentication.getName());
@@ -165,7 +128,7 @@ public class UrlController {
 
     @Operation(summary = "Deactivate a URL", description = "Soft delete - prevents redirects but keeps analytics")
     @ApiResponse(responseCode = "200", description = "URL deactivated successfully")
-    @PatchMapping("/urls/{shortCode}/deactivate")
+    @PatchMapping("/api/v1/urls/{shortCode}/deactivate")
     public ResponseEntity<ShortenUrlResponse> deactivateUrl(
             @Parameter(description = "Short code to deactivate")
             @PathVariable String shortCode,
@@ -182,7 +145,7 @@ public class UrlController {
 
     @Operation(summary = "Reactivate a URL", description = "Re-enable a deactivated URL")
     @ApiResponse(responseCode = "200", description = "URL reactivated successfully")
-    @PatchMapping("/urls/{shortCode}/reactivate")
+    @PatchMapping("/api/v1/urls/{shortCode}/reactivate")
     public ResponseEntity<ShortenUrlResponse> reactivateUrl(
             @Parameter(description = "Short code to reactivate")
             @PathVariable String shortCode,
@@ -199,7 +162,7 @@ public class UrlController {
 
     @Operation(summary = "Update URL settings", description = "Update active status or expiration")
     @ApiResponse(responseCode = "200", description = "URL updated successfully")
-    @PatchMapping("/urls/{shortCode}")
+    @PatchMapping("/api/v1/urls/{shortCode}")
     public ResponseEntity<ShortenUrlResponse> updateUrl(
             @Parameter(description = "Short code to update")
             @PathVariable String shortCode,
@@ -217,7 +180,7 @@ public class UrlController {
 
     @Operation(summary = "Permanently delete a URL", description = "Hard delete - removes URL and all analytics")
     @ApiResponse(responseCode = "204", description = "URL deleted successfully")
-    @DeleteMapping("/urls/{shortCode}/permanent")
+    @DeleteMapping("/api/v1/urls/{shortCode}/permanent")
     public ResponseEntity<Void> deleteUrlPermanently(
             @Parameter(description = "Short code to delete permanently")
             @PathVariable String shortCode,
@@ -232,8 +195,25 @@ public class UrlController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/health")
+    @GetMapping("/api/v1/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("NanoLink API is running!");
+    }
+
+    @GetMapping("/{shortCode}")
+    @SuppressWarnings("null")
+    public RedirectView redirectToOriginalUrl(
+            @Parameter(description = "The short code to redirect", example = "aB3xY9k")
+            @PathVariable String shortCode,
+            HttpServletRequest request) {
+        
+        log.info("Redirect request for short code (root): {}", shortCode);
+        
+        String originalUrl = urlService.getOriginalUrlAndTrack(shortCode, request);
+        
+        RedirectView redirectView = new RedirectView(originalUrl);
+        redirectView.setStatusCode(HttpStatus.FOUND);
+        
+        return redirectView;
     }
 }
